@@ -64,7 +64,6 @@ import com.github.zly2006.zhihu.ui.components.WebviewComp
 import com.github.zly2006.zhihu.ui.components.setupUpWebviewClient
 import com.github.zly2006.zhihu.util.enableEdgeToEdgeCompat
 import com.github.zly2006.zhihu.util.luoTianYiUrlLauncher
-import com.github.zly2006.zhihu.util.telemetry
 import kotlinx.coroutines.launch
 
 private const val LOGIN_MODE_WEB = 0
@@ -128,7 +127,7 @@ class LoginActivity : ComponentActivity() {
                             else ->
                                 LoginNoticeScreen(
                                     stepTag = "login_notice_step_3",
-                                    message = "我知晓，本应用可能会收集部分匿名化的使用信息来确定使用人数，我可以在设置中随时关闭此项遥测。",
+                                    message = "我知晓，本应用为第三方客户端，使用前请自行评估风险；如遇登录异常，可先返回设置页检查相关选项。",
                                     secondaryButtonText = "查看设置",
                                     onSecondaryAction = {
                                         startActivity(
@@ -233,7 +232,6 @@ class LoginActivity : ComponentActivity() {
                         }
                     }.create()
                     .show()
-                telemetry(this, "login")
                 true
             } else {
                 AlertDialog

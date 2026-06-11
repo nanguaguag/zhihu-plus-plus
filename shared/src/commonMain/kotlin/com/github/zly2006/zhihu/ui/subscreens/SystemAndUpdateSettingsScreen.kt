@@ -91,7 +91,7 @@ internal const val CONTINUOUS_USAGE_REMINDER_INTERVAL_MINUTES_KEY = "continuousU
 /**
  * 系统、更新和外部服务设置页。
  *
- * 页面展示更新横幅、下载/安装/跳过版本操作、GitHub Token、自动检查更新、Nightly、遥测、防沉迷提醒和社区链接。
+ * 页面展示更新横幅、下载/安装/跳过版本操作、GitHub Token、自动检查更新、Nightly、防沉迷提醒和社区链接。
  * 更新相关状态由平台 [SystemUpdateRuntime] 提供，防沉迷间隔写入 [CONTINUOUS_USAGE_REMINDER_INTERVAL_MINUTES_KEY]，
  * 改动时要同时考虑 Android 更新管理器和 Desktop 运行时。
  */
@@ -346,17 +346,6 @@ fun SystemAndUpdateSettingsScreen() {
                     onCheckedChange = {
                         checkNightlyUpdates = it
                         settings.putBoolean("checkNightlyUpdates", it)
-                    },
-                )
-
-                var allowTelemetry by remember { mutableStateOf(settings.getBoolean("allowTelemetry", true)) }
-                SettingItemWithSwitch(
-                    title = { Text("允许发送遥测统计数据") },
-                    description = { Text("仅用于统计使用人数，不包含个人隐私") },
-                    checked = allowTelemetry,
-                    onCheckedChange = {
-                        allowTelemetry = it
-                        settings.putBoolean("allowTelemetry", it)
                     },
                 )
             }

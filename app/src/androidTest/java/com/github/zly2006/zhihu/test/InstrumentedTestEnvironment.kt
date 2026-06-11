@@ -50,7 +50,6 @@ object InstrumentedTestEnvironment {
             .getSharedPreferences(PREFERENCE_NAME, Context.MODE_PRIVATE)
             .edit()
             .clear()
-            .putBoolean("allowTelemetry", false)
             .putLong("last_main_launch_timestamp", System.currentTimeMillis())
             .commit()
 
