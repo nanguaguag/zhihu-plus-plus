@@ -21,6 +21,7 @@ import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import app.cash.quickjs.QuickJs
 import com.github.zly2006.zhihu.data.AccountData
 import com.github.zly2006.zhihu.data.decodeArticleContentDetail
 import com.github.zly2006.zhihu.navigation.Article
@@ -41,6 +42,12 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -52,6 +59,79 @@ actual fun rememberZhihuAnswerPublisher(): ZhihuAnswerPublisher {
     return remember(context) {
         AndroidZhihuAnswerPublisher(context)
     }
+}
+
+actual suspend fun compileMarkdownToZhihuAnswerHtml(
+    markdown: String,
+    publisher: ZhihuAnswerPublisher,
+): String {
+    check(publisher.isSupported)
+    val normalized = markdown.replace("\r\n", "\n")
+    return withContext(Dispatchers.Default) {
+        MdToZhihuLiteQuickJsCompiler.compile(normalized)
+    }
+}
+
+private object MdToZhihuLiteQuickJsCompiler {
+    private val mutex = Mutex()
+    private var quickJs: QuickJs? = null
+    private var initialized: Boolean = false
+
+    suspend fun compile(markdown: String): String = mutex.withLock {
+        val engine = quickJs ?: QuickJs.create().also { quickJs = it }
+        if (!initialized) {
+            val source = loadResourceText("md-to-zhihu-lite.mjs")
+                .replace(Regex("export\\s*\\{[\\s\\S]*?\\};\\s*$"), "")
+
+            engine.execute(engine.compile(source, "md-to-zhihu-lite.mjs"))
+            engine.execute(engine.compile(syncWrapperScript, "md-to-zhihu-lite-wrapper.js"))
+            initialized = true
+        }
+
+        val md = Json.encodeToString(markdown)
+        return engine.evaluate(
+            "remarkMdToHTMLSync($md, { useZhihuHeadings: true })",
+            "md-to-zhihu-call.js",
+        ) as String
+    }
+
+    private fun loadResourceText(name: String): String {
+        val loader = MdToZhihuLiteQuickJsCompiler::class.java.classLoader
+            ?: throw IllegalStateException("ClassLoader 不可用，无法加载 $name")
+        val stream = loader.getResourceAsStream(name)
+            ?: throw IllegalStateException("缺少资源文件: $name")
+        return stream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+    }
+
+    private val syncWrapperScript: String =
+        """
+        globalThis.remarkMdToHTMLSync = function (md, opts) {
+          opts = opts || {};
+          const idMap = new Map();
+          const handlers = createZhihuHandlers({
+            idMap: idMap,
+            useZhihuHeadings: opts.useZhihuHeadings !== undefined ? opts.useZhihuHeadings : true
+          });
+          const rehypeOpts = {
+            allowDangerousHtml: true,
+            handlers: handlers
+          };
+          let processor = unified()
+            .use(remarkParse)
+            .use(remarkGfm)
+            .use(mathPlugin)
+            .use(wikiLinkPlugin)
+            .use(remarkCallout)
+            .use(remarkSplitLinesToParagraphs);
+          processor = processor
+            .use(remarkRehype, void 0, rehypeOpts)
+            .use(rehypeRaw)
+            .use(rehypeRemoveBlockNewlines)
+            .use(rehypeStringify);
+          const output = processor.processSync(md);
+          return String(output);
+        };
+        """.trimIndent()
 }
 
 private class AndroidZhihuAnswerPublisher(

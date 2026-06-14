@@ -48,3 +48,8 @@ actual fun rememberZhihuAnswerPublisher(): ZhihuAnswerPublisher = remember {
         ): Long = throw UnsupportedOperationException("当前平台暂不支持发布/编辑知乎回答")
     }
 }
+
+actual suspend fun compileMarkdownToZhihuAnswerHtml(
+    markdown: String,
+    publisher: ZhihuAnswerPublisher,
+): String = throw UnsupportedOperationException("当前平台暂不支持发布/编辑知乎回答")

@@ -71,6 +71,33 @@ ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 
+val mdToZhihuVersion = "1.0.2"
+val mdToZhihuLiteMjsUrl = "https://unpkg.com/md-to-zhihu@$mdToZhihuVersion/dist/lite.mjs"
+val mdToZhihuLiteMjsIntegrity = "sha256-Bn4tASUnefLYrZ2KYVIyZri9lI/Ffqmvp5/vDAtSNhY="
+val mdToZhihuLiteMjsOutputDir =
+    layout.buildDirectory
+        .dir("generated/md-to-zhihu")
+        .get()
+        .asFile
+
+val downloadMdToZhihuLiteMjs by tasks.registering(buildlogic.DownloadVerifiedFile::class) {
+    url.set(mdToZhihuLiteMjsUrl)
+    sha256SRI.set(mdToZhihuLiteMjsIntegrity)
+    outputFile.set(layout.buildDirectory.file("generated/md-to-zhihu/md-to-zhihu-lite.mjs"))
+}
+
+tasks
+    .matching {
+        it.name in
+            setOf(
+                "copyNonXmlValueResourcesForAndroidMain",
+                "compileAndroidMainLibraryResources",
+                "packageAndroidMainResources",
+            )
+    }.configureEach {
+        dependsOn(downloadMdToZhihuLiteMjs)
+    }
+
 kotlin {
     compilerOptions {
         freeCompilerArgs.add("-Xexpect-actual-classes")
@@ -135,29 +162,37 @@ kotlin {
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
             implementation("io.ktor:ktor-client-mock:3.5.0")
         }
-        androidMain.dependencies {
-            implementation("androidx.activity:activity-compose:1.13.0")
-            implementation("androidx.browser:browser:1.8.0")
-            implementation("androidx.core:core-ktx:1.18.0")
-            implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.10.0")
-            implementation("androidx.preference:preference:1.2.1")
-            implementation("androidx.webkit:webkit:1.16.0")
-            implementation("com.journeyapps:zxing-android-embedded:4.3.0")
-            implementation("com.google.zxing:core:3.5.3")
-            implementation("io.coil-kt.coil3:coil-gif:3.4.0")
-            implementation("io.coil-kt.coil3:coil-network-ktor3-android:3.4.0")
-            implementation("me.saket.telephoto:zoomable-image-coil3:0.19.0")
-            implementation("org.jsoup:jsoup:1.22.1")
+        val androidMain by getting {
+            resources.srcDir(mdToZhihuLiteMjsOutputDir)
+            dependencies {
+                implementation("androidx.activity:activity-compose:1.13.0")
+                implementation("androidx.browser:browser:1.8.0")
+                implementation("androidx.core:core-ktx:1.18.0")
+                implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.10.0")
+                implementation("androidx.preference:preference:1.2.1")
+                implementation("androidx.webkit:webkit:1.16.0")
+                implementation("app.cash.quickjs:quickjs-android:0.9.2")
+                implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+                implementation("com.google.zxing:core:3.5.3")
+                implementation("io.coil-kt.coil3:coil-gif:3.4.0")
+                implementation("io.coil-kt.coil3:coil-network-ktor3-android:3.4.0")
+                implementation("me.saket.telephoto:zoomable-image-coil3:0.19.0")
+                implementation("org.jsoup:jsoup:1.22.1")
+            }
         }
-        jvmMain.dependencies {
-            implementation("androidx.sqlite:sqlite-bundled:2.6.2")
-            implementation(compose.desktop.currentOs)
-            implementation("com.google.zxing:core:3.5.3")
-            implementation("io.ktor:ktor-client-cio:3.5.0")
-            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.11.0")
+        val jvmMain by getting {
+            dependencies {
+                implementation("androidx.sqlite:sqlite-bundled:2.6.2")
+                implementation(compose.desktop.currentOs)
+                implementation("com.google.zxing:core:3.5.3")
+                implementation("io.ktor:ktor-client-cio:3.5.0")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.11.0")
+            }
         }
-        jvmTest.dependencies {
-            implementation("org.jsoup:jsoup:1.22.1")
+        val jvmTest by getting {
+            dependencies {
+                implementation("org.jsoup:jsoup:1.22.1")
+            }
         }
     }
 }
